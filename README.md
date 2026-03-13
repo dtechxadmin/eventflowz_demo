@@ -1,5 +1,4 @@
 # 🎉 EventFlowz — Client Event Management Platform
-
 > A full-featured event scheduling and proposal platform built for 
 > corporate and private event coordinators.
 
@@ -25,7 +24,7 @@
 ---
 
 ## 🏗️ Technical Architecture
-[View Architecture Diagram](eventflowz_technical_architecture_v3.svg)
+[View Architecture Diagram](eventflowz-demo/technical-architecture/eventflowz_technical_architecture_v3.svg)
 
 ---
 
@@ -33,8 +32,8 @@
 
 | Document | Description |
 |----------|-------------|
-| [BRD](gtm-documentation/brd.pdf) | Business Requirements Document |
-| [Functional Specification](gtm-documentation/functional-specifications.pdf) | Detailed feature and system specs |
+| [BRD](eventflowz-demo/gtm-documentation/brd.pdf) | Business Requirements Document |
+| [Functional Specification](eventflowz-demo/gtm-documentation/functional-specifications.pdf) | Detailed feature and system specs |
 
 ---
 
@@ -42,6 +41,6 @@
 
 | Flow | Preview |
 |------|---------|
-| [Booking Process — Current](process-flows/booking-process-current.pdf) | Legacy booking workflow mapping client inquiry through client meeting scheduling, proposal creation, and retainer collection with manual handoffs and duplicate data entry |
-| [Booking Process — Future](process-flows/booking-process-future.pdf) | Redesigned booking workflow with automated status updates, integrated intake form, and streamlined proposal-to-payment pipeline |
-| [Equipment Assignment — Current](process-flows/equipment-assignment-current.pdf) | Existing gear kit tracking and assignment process covering team member assignment, master sheet reviews, weekly gear scheduling, and equipment pickup and return coordination |
+| [Booking Process — Current](eventflowz-demo/process-flows/booking-process-current.pdf) | Legacy booking workflow mapping client inquiry through client meeting scheduling, proposal creation, and retainer collection with manual handoffs and duplicate data entry |
+| [Booking Process — Future](eventflowz-demo/process-flows/booking-process-future.pdf) | Redesigned booking workflow with automated status updates, integrated intake form, and streamlined proposal-to-payment pipeline |
+| [Equipment Assignment — Current](eventflowz-demo/process-flows/equipment-assignment-current.pdf) | Existing gear kit tracking and assignment process covering team member assignment, master sheet reviews, weekly gear scheduling, and equipment pickup and return coordination |
