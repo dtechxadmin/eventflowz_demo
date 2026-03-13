@@ -34,7 +34,7 @@
 | Document | Description |
 |----------|-------------|
 | [BRD](gtm-documentation/brd.pdf) | Business Requirements Document |
-| [Functional Specification](gtm-documentation/functional-specification.pdf) | Detailed feature and system specs |
+| [Functional Specification](gtm-documentation/functional-specifications.pdf) | Detailed feature and system specs |
 
 ---
 
