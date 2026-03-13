@@ -25,7 +25,7 @@
 ---
 
 ## 🏗️ Technical Architecture
-[View Architecture Diagram](technical-architecture/architecture-diagram.pdf)
+[View Architecture Diagram](eventflowz_technical_architecture_v3.svg)
 
 ---
 
