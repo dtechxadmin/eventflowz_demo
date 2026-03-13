@@ -17,10 +17,10 @@
 
 | Screen | Preview |
 |--------|---------|
-| [Event Dashboard](prototype/event-dashboard.pdf) | Client-facing dashboard for tracking all active events |
-| [Intake Form](prototype/intake-form.pdf) | New client onboarding and event intake workflow |
-| [Event Summary](prototype/event-summary.pdf) | Post-event summary and reporting view |
-| [Proposal Module](prototype/proposal-module.pdf) | Dynamic proposal builder and client approval flow |
+| [Event Dashboard](prototype/event-dashboard) | Client-facing dashboard for tracking all active events |
+| [Intake Form](prototype/intake-form) | New client onboarding and event intake workflow |
+| [Event Summary](prototype/event-summary) | Post-event summary and reporting view |
+| [Proposal Module](prototype/proposal-module) | Dynamic proposal builder and client approval flow |
 
 ---
 
