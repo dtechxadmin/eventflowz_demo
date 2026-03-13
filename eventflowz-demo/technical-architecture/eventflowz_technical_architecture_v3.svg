@@ -1,0 +1,207 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" font-family="Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="1200" height="720" fill="#F7F9FC" rx="12"/>
+
+  <!-- Title bar -->
+  <rect x="0" y="0" width="1200" height="64" fill="#1E3A5F" rx="12"/>
+  <rect x="0" y="52" width="1200" height="12" fill="#1E3A5F"/>
+  <text x="600" y="26" text-anchor="middle" fill="white" font-size="17" font-weight="bold">EventFlowz — Technical Architecture</text>
+  <text x="600" y="48" text-anchor="middle" fill="#A8C4E0" font-size="12">React 18 + TypeScript · Node.js · Express.js · PostgreSQL (Neon)  |  v1.0</text>
+
+  <!-- LEGEND -->
+  <rect x="958" y="76" width="224" height="148" fill="white" rx="8" stroke="#DDDDDD" stroke-width="1"/>
+  <text x="1070" y="96" text-anchor="middle" fill="#1E3A5F" font-size="12" font-weight="bold">LEGEND</text>
+  <rect x="972" y="106" width="18" height="18" fill="#E8F4E8" rx="4" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="998" y="119" fill="#333" font-size="11">UI pages</text>
+  <rect x="972" y="130" width="18" height="18" fill="#FAE8D0" rx="4" stroke="#CC5C1D" stroke-width="1.5"/>
+  <text x="998" y="143" fill="#333" font-size="11">API services</text>
+  <rect x="972" y="154" width="18" height="18" fill="#FFF3E0" rx="4" stroke="#FF8C00" stroke-width="1.5"/>
+  <text x="998" y="167" fill="#333" font-size="11">Business logic</text>
+  <rect x="972" y="178" width="18" height="18" fill="#E8F4E8" rx="4" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="998" y="191" fill="#333" font-size="11">Data layer</text>
+  <rect x="972" y="202" width="18" height="18" fill="#F1EFE8" rx="4" stroke="#5F5E5A" stroke-width="1.5"/>
+  <text x="998" y="215" fill="#333" font-size="11">External services</text>
+
+  <!-- ARROW MARKERS -->
+  <defs>
+    <marker id="arr-navy" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1E3A5F"/>
+    </marker>
+    <marker id="arr-gray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#888780"/>
+    </marker>
+  </defs>
+
+  <!-- LAYER SPINE -->
+  <rect x="0" y="76" width="48" height="600" fill="#1E3A5F"/>
+  <rect x="0" y="76"  width="48" height="120" fill="#1E3A5F"/>
+  <rect x="0" y="196" width="48" height="140" fill="#163355"/>
+  <rect x="0" y="336" width="48" height="220" fill="#1E3A5F"/>
+  <rect x="0" y="556" width="48" height="120" fill="#163355"/>
+
+  <text x="24" y="136" text-anchor="middle" fill="#A8C4E0" font-size="11" font-weight="bold" transform="rotate(-90,24,136)">CLIENT</text>
+  <text x="24" y="266" text-anchor="middle" fill="#A8C4E0" font-size="11" font-weight="bold" transform="rotate(-90,24,266)">FRONT END</text>
+  <text x="24" y="446" text-anchor="middle" fill="#A8C4E0" font-size="11" font-weight="bold" transform="rotate(-90,24,446)">BACK END</text>
+  <text x="24" y="616" text-anchor="middle" fill="#A8C4E0" font-size="11" font-weight="bold" transform="rotate(-90,24,616)">EXTERNAL</text>
+
+  <!-- Row dividers -->
+  <line x1="48" y1="196" x2="958" y2="196" stroke="#DDDDDD" stroke-width="1"/>
+  <line x1="48" y1="336" x2="958" y2="336" stroke="#DDDDDD" stroke-width="1"/>
+  <line x1="48" y1="556" x2="958" y2="556" stroke="#DDDDDD" stroke-width="1"/>
+
+  <!-- ===================== ROW 1: CLIENT ===================== -->
+
+  <!-- Browser / Web App -->
+  <rect x="64" y="88" width="180" height="56" fill="#E8F4E8" rx="8" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="154" y="110" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="bold">Browser / Web App</text>
+  <text x="154" y="127" text-anchor="middle" fill="#2E7D32" font-size="10">Admin · Team · Vendor · Client</text>
+
+  <!-- Auth method badges -->
+  <rect x="264" y="90" width="108" height="28" fill="#F1EFE8" rx="6" stroke="#5F5E5A" stroke-width="0.5"/>
+  <text x="318" y="104" text-anchor="middle" fill="#5F5E5A" font-size="11">Google SSO</text>
+
+  <rect x="382" y="90" width="130" height="28" fill="#F1EFE8" rx="6" stroke="#5F5E5A" stroke-width="0.5"/>
+  <text x="447" y="104" text-anchor="middle" fill="#5F5E5A" font-size="11">Email + Password</text>
+
+  <rect x="522" y="90" width="148" height="28" fill="#F1EFE8" rx="6" stroke="#5F5E5A" stroke-width="0.5"/>
+  <text x="596" y="104" text-anchor="middle" fill="#5F5E5A" font-size="11">Invitation-only access</text>
+
+  <!-- arrows from web app to badges -->
+  <line x1="244" y1="110" x2="262" y2="104" stroke="#888780" stroke-width="1.5" marker-end="url(#arr-gray)"/>
+  <line x1="244" y1="110" x2="380" y2="104" stroke="#888780" stroke-width="1.5" marker-end="url(#arr-gray)"/>
+  <line x1="244" y1="110" x2="520" y2="104" stroke="#888780" stroke-width="1.5" marker-end="url(#arr-gray)"/>
+
+  <!-- HTTPS label + arrow into Front End -->
+  <line x1="154" y1="144" x2="154" y2="194" stroke="#1E3A5F" stroke-width="2" marker-end="url(#arr-navy)"/>
+  <text x="162" y="173" fill="#555" font-size="9">HTTPS</text>
+
+  <!-- ===================== ROW 2: FRONT END ===================== -->
+  <!-- sublabel -->
+  <text x="500" y="212" text-anchor="middle" fill="#555" font-size="10">React 18 + TypeScript · Vite · Shadcn/ui · Tailwind CSS · Wouter routing</text>
+
+  <!-- 5 page nodes -->
+  <rect x="64"  y="222" width="148" height="52" fill="#E8F4E8" rx="8" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="138" y="242" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="bold">Dashboard</text>
+  <text x="138" y="258" text-anchor="middle" fill="#2E7D32" font-size="10">Leads · Revenue · Events</text>
+
+  <rect x="224" y="222" width="148" height="52" fill="#E8F4E8" rx="8" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="298" y="242" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="bold">Events table</text>
+  <text x="298" y="258" text-anchor="middle" fill="#2E7D32" font-size="10">Filter · sort · search</text>
+
+  <rect x="384" y="222" width="148" height="52" fill="#E8F4E8" rx="8" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="458" y="242" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="bold">Event record</text>
+  <text x="458" y="258" text-anchor="middle" fill="#2E7D32" font-size="10">Summary · milestones</text>
+
+  <rect x="544" y="222" width="148" height="52" fill="#E8F4E8" rx="8" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="618" y="242" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="bold">Intake form</text>
+  <text x="618" y="258" text-anchor="middle" fill="#2E7D32" font-size="10">3-step multi-section</text>
+
+  <rect x="704" y="222" width="148" height="52" fill="#E8F4E8" rx="8" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="778" y="242" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="bold">Settings</text>
+  <text x="778" y="258" text-anchor="middle" fill="#2E7D32" font-size="10">Admin config · RBAC</text>
+
+  <!-- REST/JSON label + arrow into Back End -->
+  <line x1="154" y1="274" x2="154" y2="334" stroke="#1E3A5F" stroke-width="2" marker-end="url(#arr-navy)"/>
+  <text x="162" y="308" fill="#555" font-size="9">REST / JSON</text>
+
+  <!-- ===================== ROW 3: BACK END — API SERVICES ===================== -->
+  <text x="500" y="352" text-anchor="middle" fill="#555" font-size="10">Node.js · Express.js · TypeScript · esbuild</text>
+
+  <!-- API services row (coral) -->
+  <rect x="64"  y="362" width="148" height="52" fill="#FAE8D0" rx="8" stroke="#CC5C1D" stroke-width="1.5"/>
+  <text x="138" y="382" text-anchor="middle" fill="#7A2F0F" font-size="12" font-weight="bold">REST API routes</text>
+  <text x="138" y="398" text-anchor="middle" fill="#CC5C1D" font-size="10">/events /contacts /users</text>
+
+  <rect x="224" y="362" width="148" height="52" fill="#FAE8D0" rx="8" stroke="#CC5C1D" stroke-width="1.5"/>
+  <text x="298" y="382" text-anchor="middle" fill="#7A2F0F" font-size="12" font-weight="bold">Auth service</text>
+  <text x="298" y="398" text-anchor="middle" fill="#CC5C1D" font-size="10">Passport.js · bcrypt · OAuth2</text>
+
+  <rect x="384" y="362" width="148" height="52" fill="#FAE8D0" rx="8" stroke="#CC5C1D" stroke-width="1.5"/>
+  <text x="458" y="382" text-anchor="middle" fill="#7A2F0F" font-size="12" font-weight="bold">Session manager</text>
+  <text x="458" y="398" text-anchor="middle" fill="#CC5C1D" font-size="10">connect-pg-simple · 24h TTL</text>
+
+  <rect x="544" y="362" width="148" height="52" fill="#FAE8D0" rx="8" stroke="#CC5C1D" stroke-width="1.5"/>
+  <text x="618" y="382" text-anchor="middle" fill="#7A2F0F" font-size="12" font-weight="bold">Notification engine</text>
+  <text x="618" y="398" text-anchor="middle" fill="#CC5C1D" font-size="10">Email triggers · audit log</text>
+
+  <!-- Business logic row (amber) -->
+  <rect x="64"  y="428" width="200" height="52" fill="#FFF3E0" rx="8" stroke="#FF8C00" stroke-width="1.5"/>
+  <text x="164" y="448" text-anchor="middle" fill="#7A4A00" font-size="12" font-weight="bold">Event workflow engine</text>
+  <text x="164" y="464" text-anchor="middle" fill="#FF8C00" font-size="10">Lead → Planning → Complete</text>
+
+  <rect x="276" y="428" width="178" height="52" fill="#FFF3E0" rx="8" stroke="#FF8C00" stroke-width="1.5"/>
+  <text x="365" y="448" text-anchor="middle" fill="#7A4A00" font-size="12" font-weight="bold">RBAC middleware</text>
+  <text x="365" y="464" text-anchor="middle" fill="#FF8C00" font-size="10">Role-scoped route guards</text>
+
+  <rect x="466" y="428" width="228" height="52" fill="#FFF3E0" rx="8" stroke="#FF8C00" stroke-width="1.5"/>
+  <text x="580" y="448" text-anchor="middle" fill="#7A4A00" font-size="12" font-weight="bold">Proposal + payment processor</text>
+  <text x="580" y="464" text-anchor="middle" fill="#FF8C00" font-size="10">Invoices · retainer · status sync</text>
+
+  <!-- Data layer row (teal/green) -->
+  <rect x="64"  y="494" width="200" height="52" fill="#E8F4E8" rx="8" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="164" y="514" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="bold">PostgreSQL (Neon)</text>
+  <text x="164" y="530" text-anchor="middle" fill="#2E7D32" font-size="10">Events · contacts · proposals</text>
+
+  <rect x="276" y="494" width="178" height="52" fill="#E8F4E8" rx="8" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="365" y="514" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="bold">Drizzle ORM</text>
+  <text x="365" y="530" text-anchor="middle" fill="#2E7D32" font-size="10">Type-safe queries · schema.ts</text>
+
+  <rect x="466" y="494" width="228" height="52" fill="#E8F4E8" rx="8" stroke="#4CAF50" stroke-width="1.5"/>
+  <text x="580" y="514" text-anchor="middle" fill="#1B5E20" font-size="12" font-weight="bold">Session store (PG)</text>
+  <text x="580" y="530" text-anchor="middle" fill="#2E7D32" font-size="10">Auth session · 24h expiry</text>
+
+  <!-- Back End data layer → External: short vertical drop into row gap, then down to External row -->
+  <line x1="164" y1="546" x2="164" y2="568" stroke="#1E3A5F" stroke-width="2" marker-end="url(#arr-navy)"/>
+
+  <!-- ===================== ROW 4: EXTERNAL ===================== -->
+
+  <rect x="64"  y="568" width="160" height="52" fill="#F1EFE8" rx="8" stroke="#5F5E5A" stroke-width="1.5"/>
+  <text x="144" y="588" text-anchor="middle" fill="#444441" font-size="12" font-weight="bold">Google OAuth2</text>
+  <text x="144" y="604" text-anchor="middle" fill="#5F5E5A" font-size="10">SSO authentication</text>
+
+  <rect x="240" y="568" width="160" height="52" fill="#F1EFE8" rx="8" stroke="#5F5E5A" stroke-width="1.5"/>
+  <text x="320" y="588" text-anchor="middle" fill="#444441" font-size="12" font-weight="bold">Payment gateway</text>
+  <text x="320" y="604" text-anchor="middle" fill="#5F5E5A" font-size="10">Retainer · invoice processing</text>
+
+  <rect x="416" y="568" width="160" height="52" fill="#F1EFE8" rx="8" stroke="#5F5E5A" stroke-width="1.5"/>
+  <text x="496" y="588" text-anchor="middle" fill="#444441" font-size="12" font-weight="bold">Google Places API</text>
+  <text x="496" y="604" text-anchor="middle" fill="#5F5E5A" font-size="10">Venue autocomplete</text>
+
+  <rect x="592" y="568" width="160" height="52" fill="#F1EFE8" rx="8" stroke="#5F5E5A" stroke-width="1.5"/>
+  <text x="672" y="588" text-anchor="middle" fill="#444441" font-size="12" font-weight="bold">Email service</text>
+  <text x="672" y="604" text-anchor="middle" fill="#5F5E5A" font-size="10">Transactional notifications</text>
+
+  <!--
+    External → Back End connectors — all L-shaped, routed through clear corridor space.
+    Right corridor x=760 (rightmost box ends at x=694). Left margin x=54.
+    Row gap between External top (y=568) and Back End bottom (y=546): use y=557 as routing lane.
+
+    Google OAuth2   → Auth service:         up to y=557, right to x=760, up to y=388, left to x=374
+    Payment gateway → Proposal+payment:     up to y=557, right to x=780, up to y=454, left to x=696
+    Google Places   → REST API routes:      up to y=557, left to x=54,  up to y=388, right to x=62
+    Email service   → Notification engine:  up to y=557, right to x=800, up to y=388, left to x=694
+  -->
+
+  <!-- Google OAuth2 → Auth service -->
+  <path d="M 144 568  L 144 557  L 760 557  L 760 388  L 374 388"
+        fill="none" stroke="#888780" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr-gray)"/>
+
+  <!-- Payment gateway → Proposal + payment processor -->
+  <path d="M 320 568  L 320 557  L 780 557  L 780 454  L 696 454"
+        fill="none" stroke="#888780" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr-gray)"/>
+
+  <!-- Google Places API → REST API routes (routes left through left margin) -->
+  <path d="M 496 568  L 496 557  L 54 557   L 54  388  L 62  388"
+        fill="none" stroke="#888780" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr-gray)"/>
+
+  <!-- Email service → Notification engine -->
+  <path d="M 672 568  L 672 557  L 800 557  L 800 388  L 694 388"
+        fill="none" stroke="#888780" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr-gray)"/>
+
+  <!-- ===================== FOOTER ===================== -->
+  <rect x="0" y="676" width="1200" height="44" fill="#1E3A5F"/>
+  <rect x="0" y="664" width="1200" height="12" fill="#1E3A5F"/>
+  <text x="600" y="702" text-anchor="middle" fill="#A8C4E0" font-size="11">Bryant Glover  |  Demystify Technology, LLC  |  EventFlowz v1.0  |  Technical Architecture</text>
+
+</svg>
