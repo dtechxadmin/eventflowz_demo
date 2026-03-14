@@ -1,0 +1,690 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useParams, Link } from "wouter";
+import { 
+  formatDate, 
+  formatFullDate, 
+  formatTime, 
+  formatCurrency, 
+  getServiceTypeLabel, 
+  getEventTypeLabel,
+  serviceTypes,
+  eventTypes,
+  musicPreferences
+} from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
+import MilestoneProgress from "./MilestoneProgress";
+import { ArrowLeft, ChevronDown, Plus, Music } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Event, Contact, EventContact } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+export default function EventDetail() {
+  const { id } = useParams();
+  const eventId = parseInt(id as string);
+  
+  const { data: event, isLoading: isEventLoading } = useQuery<Event>({
+    queryKey: [`/api/events/${eventId}`],
+    enabled: !isNaN(eventId),
+  });
+  
+  const { data: contacts, isLoading: isContactsLoading } = useQuery<Contact[]>({
+    queryKey: [`/api/events/${eventId}/contacts`],
+    enabled: !isNaN(eventId),
+  });
+  
+  const { data: eventContacts, isLoading: isEventContactsLoading } = useQuery<EventContact[]>({
+    queryKey: [`/api/events/${eventId}/event-contacts`],
+    enabled: !isNaN(eventId),
+  });
+  
+  // Add local state for date which can be updated by the form
+  const [eventDate, setEventDate] = useState<Date | null>(null);
+  
+  // Add state for custom music genres
+  const [customGenres, setCustomGenres] = useState<Array<{value: string, label: string}>>([]);
+  const [newGenreName, setNewGenreName] = useState('');
+  const [isAddGenreOpen, setIsAddGenreOpen] = useState(false);
+  
+  // Add state for alert dialog
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [pendingChange, setPendingChange] = useState<{
+    type: 'service' | 'addon';
+    id: string;
+    checked: boolean;
+  } | null>(null);
+  
+  // Define a custom type for our form data that includes tracking fields
+  type EventFormData = Partial<Event> & {
+    dateChanged?: boolean;
+  };
+  
+  // Add state for form changes tracking
+  const [formChanged, setFormChanged] = useState(false);
+  const [eventFormData, setEventFormData] = useState<EventFormData>({});
+  
+  // Function to handle input changes and track form state
+  const handleInputChange = (field: string, value: string | number) => {
+    setEventFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setFormChanged(true);
+  };
+  
+  // Separate handler for date field to avoid type errors
+  const handleDateChange = (newDate: Date) => {
+    setEventFormData(prev => {
+      return {
+        ...prev,
+        dateChanged: true
+      } as EventFormData;
+    });
+    setFormChanged(true);
+  };
+  
+  // Function to save form changes
+  const saveFormChanges = async () => {
+    try {
+      if (Object.keys(eventFormData).length > 0 || eventDate) {
+        // Prepare data for submission
+        const dataToSubmit: Record<string, any> = {...eventFormData};
+        
+        // Log the data being submitted for debugging
+        console.log("Form data before submission:", eventFormData);
+        
+        // Remove custom fields we added for tracking
+        if ('dateChanged' in dataToSubmit) {
+          delete dataToSubmit.dateChanged;
+        }
+        
+        // If date was updated, add it to the submission
+        if (eventDate && ('dateChanged' in eventFormData)) {
+          dataToSubmit.date = eventDate.toISOString();
+        }
+        
+        console.log("Data being submitted to server:", dataToSubmit);
+        
+        const result = await updateEventMutation.mutateAsync(dataToSubmit);
+        console.log("Server response:", result);
+        
+        setFormChanged(false);
+        setEventFormData({});
+        toast({
+          title: "Changes saved",
+          description: "Event details have been updated successfully",
+        });
+      } else {
+        console.log("No changes to save");
+        toast({
+          title: "No changes detected",
+          description: "No changes were made to save",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving changes:", error);
+      toast({
+        title: "Error saving changes",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Function to cancel form changes
+  const cancelFormChanges = () => {
+    setFormChanged(false);
+    setEventFormData({});
+    
+    // Reset date if it was changed
+    if (event) {
+      setEventDate(new Date(event.date));
+    }
+    
+    toast({
+      title: "Changes discarded",
+      description: "Your changes have been discarded",
+    });
+  };
+  
+  const { toast } = useToast();
+  
+  // Add mutation for updating event
+  const updateEventMutation = useMutation({
+    mutationFn: async (data: Partial<Event>) => {
+      const res = await apiRequest("PATCH", `/api/events/${eventId}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      // Invalidate the query to refresh the event data
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}`] });
+      
+      toast({
+        title: "Changes saved",
+        description: "Your changes have been successfully saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error saving changes",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Initialize local state when event data loads
+  useEffect(() => {
+    if (event?.date) {
+      // Create a date object with noon time to avoid timezone issues
+      const dateStr = new Date(event.date).toISOString().split('T')[0] + 'T12:00:00';
+      setEventDate(new Date(dateStr));
+    }
+  }, [event]);
+  
+  // Function to add a new custom genre
+  const addCustomGenre = () => {
+    if (newGenreName.trim() === '') return;
+    
+    const newGenreValue = newGenreName.toLowerCase().replace(/\s+/g, '_');
+    setCustomGenres(prev => [...prev, {
+      value: newGenreValue,
+      label: newGenreName.trim()
+    }]);
+    
+    setNewGenreName('');
+    setIsAddGenreOpen(false);
+  };
+  
+  // Handle checkbox change and show confirmation dialog
+  const handleCheckboxChange = (type: 'service' | 'addon', id: string, checked: boolean) => {
+    setPendingChange({
+      type,
+      id,
+      checked
+    });
+    setIsAlertOpen(true);
+  };
+  
+  // Handle confirmation of the checkbox change
+  const handleConfirmChange = async () => {
+    if (!pendingChange || !event) return;
+    
+    try {
+      if (pendingChange.type === 'service') {
+        // Update services - in the schema this is defined as text
+        // If we're checking a service, just use that service ID as the value
+        // In the future, this could be expanded to support multiple services
+        let serviceValue = pendingChange.id;
+        
+        // Update the service value based on the checkbox state
+        if (pendingChange.checked) {
+          // For now, we're just setting it to the selected service
+          // In a future enhancement, this could handle multiple services
+          serviceValue = pendingChange.id;
+        } else {
+          // If unchecking, we might want to clear the service
+          serviceValue = '';
+        }
+        
+        // Save the changes
+        await updateEventMutation.mutateAsync({ services: serviceValue });
+      } else {
+        // For add-ons, we'll need to add this functionality to the schema and backend
+        // For now, just show a toast message
+        toast({
+          title: "Feature Coming Soon",
+          description: "Saving production add-ons will be available in a future update.",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating event:", error);
+    }
+    
+    // Clear the pending change and close the dialog
+    setPendingChange(null);
+    setIsAlertOpen(false);
+  };
+  
+  // Handle cancellation of the checkbox change
+  const handleCancelChange = () => {
+    setPendingChange(null);
+    setIsAlertOpen(false);
+  };
+  
+  if (isEventLoading) {
+    return (
+      <div className="pb-6 max-w-6xl mx-auto">
+        <div className="flex flex-col mb-5">
+          <Skeleton className="h-6 w-24 mb-2" />
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-80" />
+        </div>
+        <Skeleton className="h-12 w-full mb-4" />
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden mt-6">
+          <Skeleton className="h-12 w-full" />
+          <div className="p-4">
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!event) {
+    return (
+      <div className="text-center p-8">
+        <h2 className="text-2xl font-semibold mb-2">Event Not Found</h2>
+        <p className="text-neutral-600 mb-4">The event you're looking for doesn't exist or you don't have permission to view it.</p>
+        <Link href="/events">
+          <Button>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Events
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="pb-6 max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col mb-5">
+        <div className="flex-1">
+          <div className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded mb-2">
+            {getEventTypeLabel(event.eventType).toUpperCase()}
+          </div>
+          <h1 className="text-2xl font-bold mb-1">{event.name}</h1>
+        </div>
+        <div className="flex justify-between items-center">
+          <p className="text-gray-600 text-sm">
+            {getServiceTypeLabel(event.services)} — {eventDate ? formatFullDate(eventDate) : formatFullDate(event.date)}
+          </p>
+          <p className="text-gray-600 text-sm">
+            {event.venue}
+          </p>
+        </div>
+      </div>
+
+      {/* Milestone Progress - contained within a div with no z-index */}
+      <div className="relative">
+        <MilestoneProgress currentStatus={event.status} />
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="details" className="bg-white rounded-lg shadow-sm overflow-hidden mt-6">
+        <TabsList className="border-b border-gray-200 w-full rounded-none justify-start px-2">
+          <TabsTrigger value="details" className="py-2 px-6 text-sm font-medium">Details</TabsTrigger>
+          <TabsTrigger value="notes" className="py-2 px-6 text-sm font-medium">Notes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Left column (75% width) - Event details */}
+            <div className="md:w-3/4">
+              <Accordion type="single" collapsible defaultValue="event" className="mb-4">
+                <AccordionItem value="event" className="border border-gray-200 rounded-md overflow-hidden border-b-0">
+                  <AccordionTrigger className="bg-green-600 text-white hover:no-underline hover:bg-green-700 px-4 py-2">
+                    <span className="text-base font-medium">Event</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 px-2 relative">
+                    {/* Floating Save/Cancel Buttons */}
+                    {formChanged && (
+                      <div className="fixed bottom-4 right-4 flex gap-2 z-50">
+                        <Button
+                          variant="outline"
+                          onClick={cancelFormChanges}
+                          className="bg-white"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={saveFormChanges}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Save Changes
+                        </Button>
+                      </div>
+                    )}
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-600 block mb-1">Event Name</label>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-300 rounded p-2 text-sm" 
+                            defaultValue={event.name} 
+                            onChange={(e) => handleInputChange('name', e.target.value)}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-600 block mb-1">Event Date</label>
+                          <input 
+                            type="date" 
+                            className="w-full border border-gray-300 rounded p-2 text-sm" 
+                            value={eventDate ? eventDate.toISOString().split('T')[0] : (event.date ? new Date(event.date).toISOString().split('T')[0] : '')}
+                            onChange={(e) => {
+                              // Update the event date state when the date input changes
+                              if (e.target.value) {
+                                // Create date at noon to avoid timezone issues
+                                const selectedDate = new Date(e.target.value + 'T12:00:00');
+                                setEventDate(selectedDate);
+                                handleDateChange(selectedDate);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-600 block mb-1">Event Type</label>
+                          <select 
+                            className="w-full border border-gray-300 rounded p-2 text-sm" 
+                            defaultValue={event.eventType}
+                            onChange={(e) => handleInputChange('eventType', e.target.value)}
+                          >
+                            {eventTypes.map((type) => (
+                              <option key={type.value} value={type.value}>
+                                {type.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-600 block mb-1">Guest Count</label>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-300 rounded p-2 text-sm" 
+                            defaultValue={event.guestCount}
+                            onChange={(e) => {
+                              // Ensure only numbers are entered
+                              const value = e.target.value.replace(/\D/g, '');
+                              e.target.value = value;
+                              handleInputChange('guestCount', parseInt(value) || 0);
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-600 block mb-1">Min Budget</label>
+                          <div className="relative">
+                            <span className="absolute left-2 top-2 text-gray-500">$</span>
+                            <input 
+                              type="text" 
+                              className="w-full border border-gray-300 rounded p-2 pl-6 text-sm" 
+                              defaultValue={event.minBudget}
+                              onChange={(e) => {
+                                // Ensure only numbers are entered
+                                const value = e.target.value.replace(/\D/g, '');
+                                e.target.value = value;
+                                handleInputChange('minBudget', parseInt(value) || 0);
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-600 block mb-1">Max Budget</label>
+                          <div className="relative">
+                            <span className="absolute left-2 top-2 text-gray-500">$</span>
+                            <input 
+                              type="text" 
+                              className="w-full border border-gray-300 rounded p-2 pl-6 text-sm" 
+                              defaultValue={event.maxBudget}
+                              onChange={(e) => {
+                                // Ensure only numbers are entered
+                                const value = e.target.value.replace(/\D/g, '');
+                                e.target.value = value;
+                                handleInputChange('maxBudget', parseInt(value) || 0);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Venue</label>
+                        <input 
+                          type="text" 
+                          className="w-full border border-gray-300 rounded p-2 text-sm" 
+                          defaultValue={event.venue}
+                          onChange={(e) => handleInputChange('venue', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <h4 className="text-md font-semibold mb-2">Services</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                          {serviceTypes.map((service) => {
+                            const isChecked = event.services === service.value;
+                            return (
+                              <div key={service.value} className="flex items-center">
+                                <input 
+                                  type="checkbox"
+                                  id={`service-${service.value}`}
+                                  checked={isChecked}
+                                  className="mr-2"
+                                  onChange={(e) => handleCheckboxChange('service', service.value, e.target.checked)}
+                                />
+                                <label htmlFor={`service-${service.value}`} className="text-sm cursor-pointer">
+                                  {service.label}
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <h4 className="text-md font-semibold mb-2">Production Add-Ons</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                          <div className="flex items-center">
+                            <input 
+                              type="checkbox"
+                              id="addon-lighting"
+                              className="mr-2"
+                              onChange={(e) => handleCheckboxChange('addon', 'lighting', e.target.checked)}
+                            />
+                            <label htmlFor="addon-lighting" className="text-sm cursor-pointer">
+                              Lighting
+                            </label>
+                          </div>
+                          <div className="flex items-center">
+                            <input 
+                              type="checkbox"
+                              id="addon-sound"
+                              className="mr-2"
+                              onChange={(e) => handleCheckboxChange('addon', 'sound', e.target.checked)}
+                            />
+                            <label htmlFor="addon-sound" className="text-sm cursor-pointer">
+                              Sound System
+                            </label>
+                          </div>
+                          <div className="flex items-center">
+                            <input 
+                              type="checkbox"
+                              id="addon-special"
+                              className="mr-2"
+                              onChange={(e) => handleCheckboxChange('addon', 'special_effects', e.target.checked)}
+                            />
+                            <label htmlFor="addon-special" className="text-sm cursor-pointer">
+                              Special Effects
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <h4 className="text-md font-semibold mb-2">Music Preferences</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                          {musicPreferences.concat(customGenres).map((genre) => (
+                            <div key={genre.value} className="flex items-center">
+                              <input 
+                                type="checkbox"
+                                id={`genre-${genre.value}`}
+                                className="mr-2"
+                              />
+                              <label htmlFor={`genre-${genre.value}`} className="text-sm cursor-pointer">
+                                {genre.label}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-4">
+                          <Dialog open={isAddGenreOpen} onOpenChange={setIsAddGenreOpen}>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Plus className="h-3 w-3 mr-2" />
+                                Add Custom Genre
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Add Custom Music Genre</DialogTitle>
+                              </DialogHeader>
+                              <div className="py-4">
+                                <Input 
+                                  placeholder="Genre name" 
+                                  value={newGenreName} 
+                                  onChange={(e) => setNewGenreName(e.target.value)} 
+                                />
+                              </div>
+                              <DialogFooter>
+                                <Button onClick={addCustomGenre}>Add Genre</Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <h4 className="text-md font-semibold mb-2">Additional Details</h4>
+                        <textarea 
+                          className="w-full border border-gray-300 rounded p-2 text-sm min-h-[100px]"
+                          onChange={(e) => handleInputChange('additionalDetails', e.target.value)}
+                          defaultValue={event.additionalDetails || ''}
+                        ></textarea>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+            
+            {/* Right column (25% width) - Contacts section */}
+            <div className="md:w-1/4">
+              <div className="border border-gray-200 rounded-md overflow-hidden mb-4">
+                <div className="bg-green-600 text-white px-4 py-2">
+                  <span className="text-base font-medium">Contacts</span>
+                </div>
+                <div className="p-4">
+                  {/* Add New Contact Dropdown */}
+                  <Select>
+                    <SelectTrigger className="w-full mb-4">
+                      <SelectValue placeholder="Add New Contact" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="client">Add Client</SelectItem>
+                      <SelectItem value="team_member">Add Team Member</SelectItem>
+                      <SelectItem value="vendor">Add Vendor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {/* Contact List */}
+                  <div className="space-y-3">
+                    {isContactsLoading ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                      </div>
+                    ) : contacts && contacts.length > 0 ? (
+                      contacts.map((contact) => {
+                        // Determine if contact is likely a vendor
+                        const isVendor = !event.name.toLowerCase().includes(contact.firstName.toLowerCase()) && 
+                                        !event.name.toLowerCase().includes(contact.lastName.toLowerCase());
+                        
+                        // Get the first letter of first and last name for avatar
+                        const initials = (contact.firstName.charAt(0) + contact.lastName.charAt(0)).toUpperCase();
+                        
+                        // Determine contact role
+                        let role = "Client";
+                        
+                        // Look up actual role from event_contacts
+                        const eventContact = eventContacts?.find(ec => ec.contactId === contact.id);
+                        if (eventContact && eventContact.role) {
+                          role = eventContact.role;
+                        } else if (contact.type === "team_member") {
+                          role = "Team Member";
+                        } else if (isVendor && contact.type === "vendor") {
+                          // Alternate between Planner and Venue Director for vendors if no specific role
+                          role = contact.email.includes("venue") ? "Venue Director" : "Planner";
+                        }
+                        
+                        return (
+                          <div key={contact.id} className="flex items-start space-x-3 p-2 border border-gray-100 rounded-md hover:bg-gray-50">
+                            <div className="bg-green-100 text-green-800 h-10 w-10 rounded-full flex items-center justify-center font-medium">
+                              {initials}
+                            </div>
+                            <div>
+                              <div className="font-medium">{contact.firstName} {contact.lastName}</div>
+                              <div className="text-sm text-gray-500">{role}</div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-neutral-500 text-sm italic">No contacts associated with this event.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="notes" className="p-4">
+          <div className="bg-neutral-50 border border-neutral-200 rounded-md p-4">
+            <p className="text-neutral-500 text-sm italic">No notes have been added to this event yet.</p>
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      {/* Alert Dialog for Confirmation */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingChange?.type === 'service' 
+                ? `Are you sure you want to ${pendingChange.checked ? 'add' : 'remove'} this service?` 
+                : `Are you sure you want to ${pendingChange?.checked ? 'add' : 'remove'} this production add-on?`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelChange}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmChange}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

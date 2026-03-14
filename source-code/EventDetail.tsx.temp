@@ -1,0 +1,730 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useParams, Link } from "wouter";
+import { 
+  formatDate, 
+  formatFullDate, 
+  formatTime, 
+  formatCurrency, 
+  getServiceTypeLabel, 
+  getEventTypeLabel,
+  serviceTypes,
+  eventTypes,
+  musicPreferences
+} from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
+import MilestoneProgress from "./MilestoneProgress";
+import { ArrowLeft, ChevronDown, Plus, Music } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Event, Contact } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+export default function EventDetail() {
+  const { id } = useParams();
+  const eventId = parseInt(id as string);
+  
+  const { data: event, isLoading: isEventLoading } = useQuery<Event>({
+    queryKey: [`/api/events/${eventId}`],
+    enabled: !isNaN(eventId),
+  });
+  
+  const { data: contacts, isLoading: isContactsLoading } = useQuery<Contact[]>({
+    queryKey: [`/api/events/${eventId}/contacts`],
+    enabled: !isNaN(eventId),
+  });
+  
+  // Add local state for date which can be updated by the form
+  const [eventDate, setEventDate] = useState<Date | null>(null);
+  
+  // Add state for custom music genres
+  const [customGenres, setCustomGenres] = useState<Array<{value: string, label: string}>>([]);
+  const [newGenreName, setNewGenreName] = useState('');
+  const [isAddGenreOpen, setIsAddGenreOpen] = useState(false);
+  
+  // Add state for alert dialog
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [pendingChange, setPendingChange] = useState<{
+    type: 'service' | 'addon';
+    id: string;
+    checked: boolean;
+  } | null>(null);
+  
+  // Define a custom type for our form data that includes tracking fields
+  type EventFormData = Partial<Event> & {
+    dateChanged?: boolean;
+  };
+  
+  // Add state for form changes tracking
+  const [formChanged, setFormChanged] = useState(false);
+  const [eventFormData, setEventFormData] = useState<EventFormData>({});
+  
+  // Function to handle input changes and track form state
+  const handleInputChange = (field: string, value: string | number) => {
+    setEventFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setFormChanged(true);
+  };
+  
+  // Separate handler for date field to avoid type errors
+  const handleDateChange = (newDate: Date) => {
+    setEventFormData(prev => {
+      return {
+        ...prev,
+        dateChanged: true
+      } as EventFormData;
+    });
+    setFormChanged(true);
+  };
+  
+  // Function to save form changes
+  const saveFormChanges = async () => {
+    try {
+      if (Object.keys(eventFormData).length > 0 || eventDate) {
+        // Prepare data for submission
+        const dataToSubmit: Record<string, any> = {...eventFormData};
+        
+        // Log the data being submitted for debugging
+        console.log("Form data before submission:", eventFormData);
+        
+        // Remove custom fields we added for tracking
+        if ('dateChanged' in dataToSubmit) {
+          delete dataToSubmit.dateChanged;
+        }
+        
+        // If date was updated, add it to the submission
+        if (eventDate && ('dateChanged' in eventFormData)) {
+          dataToSubmit.date = eventDate.toISOString();
+        }
+        
+        console.log("Data being submitted to server:", dataToSubmit);
+        
+        const result = await updateEventMutation.mutateAsync(dataToSubmit);
+        console.log("Server response:", result);
+        
+        setFormChanged(false);
+        setEventFormData({});
+        toast({
+          title: "Changes saved",
+          description: "Event details have been updated successfully",
+        });
+      } else {
+        console.log("No changes to save");
+        toast({
+          title: "No changes detected",
+          description: "No changes were made to save",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving changes:", error);
+      toast({
+        title: "Error saving changes",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Function to cancel form changes
+  const cancelFormChanges = () => {
+    setFormChanged(false);
+    setEventFormData({});
+    
+    // Reset date if it was changed
+    if (event) {
+      setEventDate(new Date(event.date));
+    }
+    
+    toast({
+      title: "Changes discarded",
+      description: "Your changes have been discarded",
+    });
+  };
+  
+  const { toast } = useToast();
+  
+  // Add mutation for updating event
+  const updateEventMutation = useMutation({
+    mutationFn: async (data: Partial<Event>) => {
+      const res = await apiRequest("PATCH", `/api/events/${eventId}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      // Invalidate the query to refresh the event data
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}`] });
+      
+      toast({
+        title: "Changes saved",
+        description: "Your changes have been successfully saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error saving changes",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Initialize local state when event data loads
+  useEffect(() => {
+    if (event?.date) {
+      // Create a date object with noon time to avoid timezone issues
+      const dateStr = new Date(event.date).toISOString().split('T')[0] + 'T12:00:00';
+      setEventDate(new Date(dateStr));
+    }
+  }, [event]);
+  
+  // Function to add a new custom genre
+  const addCustomGenre = () => {
+    if (newGenreName.trim() === '') return;
+    
+    const newGenreValue = newGenreName.toLowerCase().replace(/\s+/g, '_');
+    setCustomGenres(prev => [...prev, {
+      value: newGenreValue,
+      label: newGenreName.trim()
+    }]);
+    
+    setNewGenreName('');
+    setIsAddGenreOpen(false);
+  };
+  
+  // Handle checkbox change and show confirmation dialog
+  const handleCheckboxChange = (type: 'service' | 'addon', id: string, checked: boolean) => {
+    setPendingChange({
+      type,
+      id,
+      checked
+    });
+    setIsAlertOpen(true);
+  };
+  
+  // Handle confirmation of the checkbox change
+  const handleConfirmChange = async () => {
+    if (!pendingChange || !event) return;
+    
+    try {
+      if (pendingChange.type === 'service') {
+        // Update services - in the schema this is defined as text
+        // If we're checking a service, just use that service ID as the value
+        // In the future, this could be expanded to support multiple services
+        let serviceValue = pendingChange.id;
+        
+        // Update the service value based on the checkbox state
+        if (pendingChange.checked) {
+          // For now, we're just setting it to the selected service
+          // In a future enhancement, this could handle multiple services
+          serviceValue = pendingChange.id;
+        } else {
+          // If unchecking, we might want to clear the service
+          serviceValue = '';
+        }
+        
+        // Save the changes
+        await updateEventMutation.mutateAsync({ services: serviceValue });
+      } else {
+        // For add-ons, we'll need to add this functionality to the schema and backend
+        // For now, just show a toast message
+        toast({
+          title: "Feature Coming Soon",
+          description: "Saving production add-ons will be available in a future update.",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating event:", error);
+    }
+    
+    // Clear the pending change and close the dialog
+    setPendingChange(null);
+    setIsAlertOpen(false);
+  };
+  
+  // Handle cancellation of the checkbox change
+  const handleCancelChange = () => {
+    setPendingChange(null);
+    setIsAlertOpen(false);
+  };
+  
+  if (isEventLoading) {
+    return <EventDetailSkeleton />;
+  }
+  
+  if (!event) {
+    return (
+      <div className="text-center p-8">
+        <h2 className="text-2xl font-semibold mb-2">Event Not Found</h2>
+        <p className="text-neutral-600 mb-4">The event you're looking for doesn't exist or you don't have permission to view it.</p>
+        <Link href="/events">
+          <Button>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Events
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="pb-6 max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col mb-5">
+        <div className="flex-1">
+          <div className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded mb-2">
+            {getEventTypeLabel(event.eventType).toUpperCase()}
+          </div>
+          <h1 className="text-2xl font-bold mb-1">{event.name}</h1>
+        </div>
+        <div className="flex justify-between items-center">
+          <p className="text-gray-600 text-sm">
+            {getServiceTypeLabel(event.services)} — {eventDate ? formatFullDate(eventDate) : formatFullDate(event.date)}
+          </p>
+          <p className="text-gray-600 text-sm">
+            {event.venue}
+          </p>
+        </div>
+      </div>
+
+      {/* Milestone Progress - contained within a div with no z-index */}
+      <div className="relative">
+        <MilestoneProgress currentStatus={event.status} />
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="details" className="bg-white rounded-lg shadow-sm overflow-hidden mt-6">
+        <TabsList className="border-b border-gray-200 w-full rounded-none justify-start px-2">
+          <TabsTrigger value="details" className="py-2 px-6 text-sm font-medium">Details</TabsTrigger>
+          <TabsTrigger value="notes" className="py-2 px-6 text-sm font-medium">Notes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Left column (75% width) - Event details */}
+            <div className="md:w-3/4">
+              <Accordion type="single" collapsible defaultValue="event" className="mb-4">
+                <AccordionItem value="event" className="border border-gray-200 rounded-md overflow-hidden border-b-0">
+                  <AccordionTrigger className="bg-green-600 text-white hover:no-underline hover:bg-green-700 px-4 py-2">
+                    <span className="text-base font-medium">Event</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 px-2 relative">
+                {/* Floating Save/Cancel Buttons */}
+                {formChanged && (
+                  <div className="fixed bottom-4 right-4 flex gap-2 z-50">
+                    <Button
+                      variant="outline"
+                      onClick={cancelFormChanges}
+                      className="bg-white"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={saveFormChanges}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Left Column */}
+                  <div>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Event Name</label>
+                        <input 
+                          type="text" 
+                          className="w-full border border-gray-300 rounded p-2 text-sm" 
+                          defaultValue={event.name} 
+                          onChange={(e) => handleInputChange('name', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Event Date</label>
+                        <input 
+                          type="date" 
+                          className="w-full border border-gray-300 rounded p-2 text-sm" 
+                          value={eventDate ? eventDate.toISOString().split('T')[0] : (event.date ? new Date(event.date).toISOString().split('T')[0] : '')}
+                          onChange={(e) => {
+                            // Update the event date state when the date input changes
+                            if (e.target.value) {
+                              // Create date at noon to avoid timezone issues
+                              const selectedDate = new Date(e.target.value + 'T12:00:00');
+                              setEventDate(selectedDate);
+                              handleDateChange(selectedDate);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Event Type</label>
+                        <select 
+                          className="w-full border border-gray-300 rounded p-2 text-sm" 
+                          defaultValue={event.eventType}
+                          onChange={(e) => handleInputChange('eventType', e.target.value)}
+                        >
+                          {eventTypes.map((type) => (
+                            <option key={type.value} value={type.value}>
+                              {type.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Guest Count</label>
+                        <input 
+                          type="text" 
+                          className="w-full border border-gray-300 rounded p-2 text-sm" 
+                          defaultValue={event.guestCount}
+                          onChange={(e) => {
+                            // Ensure only numbers are entered
+                            const value = e.target.value.replace(/\D/g, '');
+                            e.target.value = value;
+                            handleInputChange('guestCount', parseInt(value) || 0);
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Min Budget</label>
+                        <div className="relative">
+                          <span className="absolute left-2 top-2 text-gray-500">$</span>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-300 rounded p-2 pl-6 text-sm" 
+                            defaultValue={event.minBudget}
+                            onChange={(e) => {
+                              // Ensure only numbers are entered
+                              const value = e.target.value.replace(/[^\d.]/g, '');
+                              e.target.value = value;
+                              handleInputChange('minBudget', parseFloat(value) || 0);
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Max Budget</label>
+                        <div className="relative">
+                          <span className="absolute left-2 top-2 text-gray-500">$</span>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-300 rounded p-2 pl-6 text-sm" 
+                            defaultValue={event.maxBudget}
+                            onChange={(e) => {
+                              // Ensure only numbers are entered
+                              const value = e.target.value.replace(/[^\d.]/g, '');
+                              e.target.value = value;
+                              handleInputChange('maxBudget', parseFloat(value) || 0);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <div className="mb-4">
+                          <label className="text-xs text-gray-600 block mb-1">Services</label>
+                          <div className="flex flex-col space-y-2 mt-1">
+                            <div className="flex items-center">
+                              <input 
+                                type="checkbox" 
+                                id="dj-mc" 
+                                className="rounded border-gray-300 text-primary mr-2" 
+                                checked={Array.isArray(event.services) ? event.services.includes('dj_mc') : 
+                                        typeof event.services === 'string' ? event.services === 'dj_mc' : false}
+                                onChange={(e) => handleCheckboxChange('service', 'dj_mc', e.target.checked)}
+                              />
+                              <label htmlFor="dj-mc" className="text-sm">DJ + MC</label>
+                            </div>
+                            <div className="flex items-center">
+                              <input 
+                                type="checkbox" 
+                                id="live-music" 
+                                className="rounded border-gray-300 text-primary mr-2" 
+                                checked={Array.isArray(event.services) ? event.services.includes('live_music') : 
+                                        typeof event.services === 'string' ? event.services === 'live_music' : false}
+                                onChange={(e) => handleCheckboxChange('service', 'live_music', e.target.checked)}
+                              />
+                              <label htmlFor="live-music" className="text-sm">L!VE Music</label>
+                            </div>
+                            <div className="flex items-center">
+                              <input 
+                                type="checkbox" 
+                                id="dj-fusion" 
+                                className="rounded border-gray-300 text-primary mr-2" 
+                                checked={Array.isArray(event.services) ? event.services.includes('dj_fusion') : 
+                                        typeof event.services === 'string' ? event.services === 'dj_fusion' : false}
+                                onChange={(e) => handleCheckboxChange('service', 'dj_fusion', e.target.checked)}
+                              />
+                              <label htmlFor="dj-fusion" className="text-sm">DJ Fusion</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mb-4">
+                          <label className="text-xs text-gray-600 block mb-1">Production Add-Ons</label>
+                          <div className="flex flex-col space-y-2 mt-1">
+                            <div className="flex items-center">
+                              <input 
+                                type="checkbox" 
+                                id="8-uls" 
+                                className="rounded border-gray-300 text-primary mr-2" 
+                                checked={false}
+                                onChange={(e) => handleCheckboxChange('addon', '8_uls', e.target.checked)}
+                              />
+                              <label htmlFor="8-uls" className="text-sm">8 ULs</label>
+                            </div>
+                            <div className="flex items-center">
+                              <input 
+                                type="checkbox" 
+                                id="photobooth" 
+                                className="rounded border-gray-300 text-primary mr-2" 
+                                checked={false}
+                                onChange={(e) => handleCheckboxChange('addon', 'photobooth', e.target.checked)}
+                              />
+                              <label htmlFor="photobooth" className="text-sm">Photobooth</label>
+                            </div>
+                            <div className="flex items-center">
+                              <input 
+                                type="checkbox" 
+                                id="jbl" 
+                                className="rounded border-gray-300 text-primary mr-2" 
+                                checked={false}
+                                onChange={(e) => handleCheckboxChange('addon', 'jbl', e.target.checked)}
+                              />
+                              <label htmlFor="jbl" className="text-sm">JBL</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Referral Source at bottom of left column to align with Additional Details */}
+                    <div className="mb-3 mt-auto">
+                      <label className="text-xs text-gray-600 block mb-1">Referral Source</label>
+                      <input type="text" className="w-full border border-gray-300 rounded p-2 text-sm" 
+                        defaultValue={event.referralSource || ''} />
+                    </div>
+                  </div>
+                  
+                  {/* Right Column */}
+                  <div>
+                    <div className="mb-3">
+                      <label className="text-xs text-gray-600 block mb-1">Venue</label>
+                      <input 
+                        type="text" 
+                        className="w-full border border-gray-300 rounded p-2 text-sm" 
+                        defaultValue={event.venue} 
+                        onChange={(e) => handleInputChange('venue', e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Start Time</label>
+                        <input type="time" className="w-full border border-gray-300 rounded p-2 text-sm" 
+                          defaultValue={event.startTime && typeof event.startTime === 'string' ? new Date(event.startTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false}) : ''} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">End Time</label>
+                        <input type="time" className="w-full border border-gray-300 rounded p-2 text-sm" 
+                          defaultValue={event.endTime && typeof event.endTime === 'string' ? new Date(event.endTime).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false}) : ''} />
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs text-gray-600">Favorite Music</label>
+                        <Dialog open={isAddGenreOpen} onOpenChange={setIsAddGenreOpen}>
+                          <DialogTrigger asChild>
+                            <button 
+                              type="button"
+                              className="flex items-center text-xs text-green-600 hover:text-green-800"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Genre
+                            </button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                              <DialogTitle>Add Custom Music Genre</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              <div className="grid grid-cols-1 gap-2">
+                                <label htmlFor="name" className="text-xs text-gray-600">
+                                  Genre Name
+                                </label>
+                                <Input
+                                  id="name"
+                                  value={newGenreName}
+                                  onChange={(e) => setNewGenreName(e.target.value)}
+                                  className="col-span-3"
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button type="submit" onClick={addCustomGenre}>Add Genre</Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                      
+                      <div className="border border-gray-200 rounded-md p-2 space-y-2 max-h-[300px] overflow-y-auto">
+                        {[...musicPreferences, ...customGenres].map((option) => {
+                          // Split label into main text and sub text if there's a hyphen
+                          const labelParts = option.label.split(' - ');
+                          const mainLabel = labelParts[0];
+                          const subLabel = labelParts.length > 1 ? labelParts[1] : '';
+                          
+                          // Check if this music preference is in the event's musicPreferences
+                          // Since musicPreferences is stored as a comma-separated string in the database
+                          const musicPreferencesList = event.musicPreferences 
+                            ? event.musicPreferences.split(',').map(item => item.trim())
+                            : [];
+                          const isChecked = musicPreferencesList.includes(option.value);
+                          
+                          return (
+                            <div key={option.value} className="flex items-start">
+                              <input 
+                                type="checkbox" 
+                                id={`music-${option.value}`} 
+                                className="rounded border-gray-300 text-primary mt-1 mr-2" 
+                                defaultChecked={isChecked}
+                              />
+                              <label htmlFor={`music-${option.value}`} className="text-sm flex flex-col">
+                                <span className="font-medium">{mainLabel}</span>
+                                {subLabel && (
+                                  <span className="text-xs text-gray-500">{subLabel}</span>
+                                )}
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <label className="text-xs text-gray-600 block mb-1">Additional Details</label>
+                      <textarea 
+                        className="w-full border border-gray-300 rounded p-2 text-sm min-h-[100px]" 
+                        defaultValue={event.additionalDetails || ''}
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <div className="bg-white border border-gray-200 rounded-md shadow-sm p-4 mb-4">
+            <h3 className="font-semibold text-lg mb-3">Contacts</h3>
+            {isContactsLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : contacts && contacts.length > 0 ? (
+              <div className="space-y-2">
+                {contacts.map((contact) => (
+                  <div key={contact.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50">
+                    <div>
+                      <div className="font-medium">
+                        {contact.firstName} {contact.lastName}
+                      </div>
+                      <div className="text-sm text-gray-600">{contact.email}</div>
+                    </div>
+                    <div>
+                      {/* Role badge */}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Client
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-neutral-500 text-sm italic">No contacts associated with this event.</p>
+            )}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="notes" className="p-4">
+          <div className="bg-neutral-50 border border-neutral-200 rounded-md p-4">
+            <p className="text-neutral-500 text-sm italic">No notes have been added to this event yet.</p>
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      {/* AlertDialog for service and production add-on changes */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingChange?.type === 'service' ? 
+                pendingChange?.checked ? 
+                  `Are you sure you want to add this service to the event?` : 
+                  `Are you sure you want to remove this service from the event?` :
+                pendingChange?.checked ? 
+                  `Are you sure you want to add this production add-on to the event?` : 
+                  `Are you sure you want to remove this production add-on from the event?`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelChange}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmChange}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function EventDetailSkeleton() {
+  return (
+    <div className="pb-6 max-w-6xl mx-auto">
+      <div className="flex flex-col mb-5">
+        <div className="flex-1">
+          <Skeleton className="h-6 w-20 rounded mb-2" />
+          <Skeleton className="h-8 w-60 rounded mb-1" />
+        </div>
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-4 w-48 rounded" />
+          <Skeleton className="h-4 w-32 rounded" />
+        </div>
+      </div>
+      
+      {/* Skeleton for milestone progress */}
+      <div className="flex justify-between relative mb-6">
+        <Skeleton className="h-10 w-full rounded" />
+      </div>
+      
+      {/* Skeleton for tabs */}
+      <Skeleton className="h-[400px] w-full rounded" />
+    </div>
+  );
+}
