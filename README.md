@@ -55,4 +55,4 @@
 
 ## 🏗️ Technical Architecture
 
-[View Architecture Diagram](eventflowz-demo/technical-architecture/eventflowz_technical_architecture_v3.svg)
+[View Architecture Diagram](https://raw.githubusercontent.com/dtechxadmin/eventflowz_demo/main/eventflowz-demo/technical-architecture/eventflowz_technical_architecture_v3.svg)
