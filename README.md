@@ -47,9 +47,9 @@
 
 | Flow | Preview |
 |------|---------|
-| [Booking Process — Current](https://raw.githubusercontent.com/dtechxadmin/eventflowz_demo/main/eventflowz-demo/process-flows/booking-process-current.pdf) | Legacy booking workflow mapping client inquiry through client meeting scheduling, proposal creation, and retainer collection with manual handoffs and duplicate data entry |
-| [Booking Process — Future](https://raw.githubusercontent.com/dtechxadmin/eventflowz_demo/main/eventflowz-demo/process-flows/booking-process-future.pdf) | Redesigned booking workflow with automated status updates, integrated intake form, and streamlined proposal-to-payment pipeline |
-| [Equipment Assignment — Current](https://raw.githubusercontent.com/dtechxadmin/eventflowz_demo/main/eventflowz-demo/process-flows/equipment-assignment-current.pdf) | Existing gear kit tracking and assignment process covering team member assignment, master sheet reviews, weekly gear scheduling, and equipment pickup and return coordination |
+| [Booking Process — Current](eventflowz-demo/process-flows/booking-process-current.pdf) | Legacy booking workflow mapping client inquiry through client meeting scheduling, proposal creation, and retainer collection with manual handoffs and duplicate data entry |
+| [Booking Process — Future](eventflowz-demo/process-flows/booking-process-future.pdf) | Redesigned booking workflow with automated status updates, integrated intake form, and streamlined proposal-to-payment pipeline |
+| [Equipment Assignment — Current](eventflowz-demo/process-flows/equipment-assignment-current.pdf) | Existing gear kit tracking and assignment process covering team member assignment, master sheet reviews, weekly gear scheduling, and equipment pickup and return coordination |
 
 ---
 
